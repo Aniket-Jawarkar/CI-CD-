@@ -62,6 +62,7 @@
 	</dependencies>
 
 	<build>
+	   <finalName>app</finalName> <!-- so that all jar files will be renamed to app.jar  -->
 		<plugins>
 			<plugin>
 				<groupId>org.springframework.boot</groupId>
