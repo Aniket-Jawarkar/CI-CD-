@@ -1,14 +1,15 @@
-# Use OpenJDK 17 for Spring Boot
-FROM openjdk:17-jdk-slim
-
-# Set working directory
+# Stage 1: build the jar
+FROM maven:3.9-openjdk-17 AS build
 WORKDIR /app
+COPY pom.xml .
+COPY src ./src
+# -B (batch mode) → disables interactive prompts (better for CI/CD).
+#-ntp → no transfer progress logs (cleaner output).
+RUN mvn -B -ntp clean package -DskipTests
 
-# Copy built jar (make sure to run `mvn clean package -DskipTests` first)
-COPY target/app.jar app.jar
-
-# Expose backend port
+# Stage 2: runtime image
+FROM openjdk:17-jdk-slim
+WORKDIR /app
+COPY --from=build /app/target/*.jar app.jar
 EXPOSE 8080
-
-# Run Spring Boot
 ENTRYPOINT ["java", "-jar", "app.jar"]
