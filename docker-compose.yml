@@ -1,42 +1,52 @@
-version: "3.8"
 
 services:
   mysql:
-    image: mysql:8.0
-    container_name: mysql-db
+    image: mysql:8.0.38
     environment:
       MYSQL_ROOT_PASSWORD: root
       MYSQL_DATABASE: cicd
+      MYSQL_USER: cicduser
+      MYSQL_PASSWORD: cicdpass
     ports:
-      - "3306:3306"
+      - "3306:3306"                # optional for local dev; remove in prod
+    volumes:
+      - mysql-data:/var/lib/mysql
     networks:
       - cicd-net
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "localhost"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
 
   backend:
     build: ./backend
-    container_name: springboot-backend
     depends_on:
       - mysql
     environment:
       SPRING_DATASOURCE_URL: jdbc:mysql://mysql:3306/cicd?useSSL=false&serverTimezone=UTC
-      SPRING_DATASOURCE_USERNAME: root
-      SPRING_DATASOURCE_PASSWORD: password
+      SPRING_DATASOURCE_USERNAME: cicduser
+      SPRING_DATASOURCE_PASSWORD: cicdpass
     ports:
       - "8080:8080"
     networks:
       - cicd-net
+    restart: unless-stopped
 
   frontend:
     build: ./frontend
-    container_name: react-frontend
     depends_on:
       - backend
     ports:
-      - "3000:3000"
+      - "3000:80"      # map host 3000 -> nginx container port 80
     networks:
       - cicd-net
+    restart: unless-stopped
+
+volumes:
+  mysql-data:
 
 networks:
   cicd-net:
     driver: bridge
-
