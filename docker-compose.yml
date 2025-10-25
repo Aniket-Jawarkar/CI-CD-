@@ -1,7 +1,7 @@
 
 services:
   mysql:
-    image: mysql:8.0.38
+    image: mysql:8.0
     environment:
       MYSQL_ROOT_PASSWORD: root
       MYSQL_DATABASE: cicd
