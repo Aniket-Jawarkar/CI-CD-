@@ -1,17 +1,16 @@
-
 # it sets the base image
 FROM node:20-alpine AS build 
 
-# it sets the working direclty to app inside the container for following subsequent instrutions in the dockerfile    
+# it sets the working directory to /app inside the container for following instructions
 WORKDIR /app
 
-# Copies files from your local project directory (the directory where you run docker build) into the container. 
+# Copies files from your local project directory (the directory where you run docker build) into the container.
 # ./ in this line refers to the current working directory inside the container.
 COPY package*.json ./  
 
 # Execute this command inside the container while building the image.
-# t creates a new image layer on top of the previous one.
-# this layer will contain the filesystem changes that the command applies. 
+# It creates a new image layer on top of the previous one.
+# This layer will contain the filesystem changes that the command applies. 
 RUN npm ci
 
 # . = copy all files and folders
@@ -19,36 +18,31 @@ RUN npm ci
 # second dot = The current working directory inside the container, set by WORKDIR /app.
 COPY . .
 
-
+# Build the production-ready Vite app
+# This will generate the /app/dist folder
 RUN npm run build
 
+# new stage nginx = small web server
+FROM nginx:stable-alpine
 
-# new statge nginx = small web server
-FROM  nginx:stable-alpine
+# optional: remove default nginx files
+RUN rm -rf /usr/share/nginx/html/*
 
-
-#build is the name of a previous stage
-#COPY --from=build tells Docker: Copy files from that named stage, not from my local machine.
-#/app/build = the folder inside the previous stage (Stage 1) that contains the production-ready React app.
-#/usr/share/nginx/html = the destination inside the current (Stage 2) image, which is the default folder Nginx serves.
-COPY --from=build /app/build /usr/share/nginx/html
-
-
+# COPY --from=build tells Docker: Copy files from that named stage, not from my local machine.
+# /app/dist = the folder inside the previous stage (Stage 1) that contains the production-ready Vite app.
+# /usr/share/nginx/html = the destination inside the current (Stage 2) image, which is the default folder Nginx serves.
+COPY --from=build /app/dist /usr/share/nginx/html
 
 # It tells Docker and anyone reading your Dockerfile that this container will listen on port 80
-#It does not actually open the port on your computer or make it accessible outside Docker.
-#It’s mainly for documentation and for tools like Docker Compose or orchestration platforms to know which ports the container uses.
-#To actually access the container from your machine, you must map the container port to a host port using -p when running the container:
-#docker run -p 3000:80 my-frontend
-
+# It does not actually open the port on your computer or make it accessible outside Docker.
+# It’s mainly for documentation and for tools like Docker Compose or orchestration platforms to know which ports the container uses.
+# To actually access the container from your machine, you must map the container port to a host port using -p when running the container:
+# docker run -p 3000:80 my-frontend
 EXPOSE 80
 
-#Specify the default command to run when the container starts.
-
-
+# Specify the default command to run when the container starts.
 # Don’t run Nginx in the background (daemon mode).
 # Keep it running in the foreground, which is required for Docker to keep the container alive.
 # Without daemon off, Docker would start Nginx in the background, and then the container would immediately exit,
 # because Docker expects the main process to run in the foreground.
 CMD ["nginx", "-g", "daemon off;"]
-
